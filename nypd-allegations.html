@@ -88,7 +88,27 @@
             tableBody.appendChild(row);
         });
 
-        new Tablesort(document.getElementById('allegations-table'));
+        const allegationsTable = document.getElementById('allegations-table');
+        const tablesort = new Tablesort(allegationsTable);
+
+        // Pendo Track Event: Tablesort dispatches `afterSort` on the table only after the rows have been
+        // re-appended, so this fires once per completed sort. Header clicks are already captured as
+        // Features; this adds which column was sorted and in which direction.
+        // TODO: this page does not include the Pendo install snippet, so nothing is sent unless an agent is
+        // already present (e.g. injected by an extension). Add the snippet for the subscription that should
+        // receive this event.
+        allegationsTable.addEventListener('afterSort', () => {
+            if (!window.pendo || typeof window.pendo.track !== 'function') return;
+
+            const header = tablesort.current; // the <th> that was just sorted on
+            pendo.track('allegations_table_sorted', {
+                sortColumn: header.className, // count | name | rank | demo | unique-offenses | unique-outcomes
+                sortColumnLabel: header.textContent.trim(), // e.g. 'Number of Offenses'
+                sortOrder: header.getAttribute('aria-sort'), // 'ascending' | 'descending'
+                officerCount: sortedByNumberOfOffenses.length,
+                allegationCount: window.allegations.length
+            });
+        });
 
         function generateUniqueOffensesText(officerOffensesArray) {
             const uniqueOffenses = officerOffensesArray.reduce((acc, row) => {
